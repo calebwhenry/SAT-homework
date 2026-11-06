@@ -309,7 +309,8 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") next();
   else if (e.key === "ArrowLeft" && state.idx > 0) goTo(state.idx - 1);
   else if (e.key === "Enter" && !e.target.closest("button")) {
-    if (!$("continue").hidden) setStep("predicate");
+    if (state.results[current().id]) { e.preventDefault(); next(); }
+    else if (!$("continue").hidden) setStep("predicate");
     else if (!$("submit").hidden && !$("submit").disabled) submit();
   }
 });
