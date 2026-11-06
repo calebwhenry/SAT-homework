@@ -1,6 +1,6 @@
 // Teacher dashboard: class totals, per-student scores, most-missed questions.
-import * as api from "./api.js";
-import { showAuth } from "./auth.js";
+import * as api from "./api.js?v=20261106033338";
+import { showAuth } from "./auth.js?v=20261106033338";
 
 const $ = (id) => document.getElementById(id);
 const SCREENS = ["loading", "auth", "denied", "dash"];

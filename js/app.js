@@ -1,8 +1,8 @@
 // Student page: sign-in, set menu, and the subject/verb practice.
-import * as api from "./api.js";
-import { showAuth } from "./auth.js";
-import { $, show, esc, showDone as showDoneScreen } from "./ui.js";
-import { openChoiceSet } from "./mc.js";
+import * as api from "./api.js?v=20261106033338";
+import { showAuth } from "./auth.js?v=20261106033338";
+import { $, show, esc, showDone as showDoneScreen } from "./ui.js?v=20261106033338";
+import { openChoiceSet } from "./mc.js?v=20261106033338";
 
 const state = {
   questions: [],

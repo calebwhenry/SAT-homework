@@ -1,5 +1,5 @@
 // Sign-in / create-account form shared by the student page and the teacher dashboard.
-import * as api from "./api.js";
+import * as api from "./api.js?v=20261106033338";
 
 const $ = (id) => document.getElementById(id);
 
