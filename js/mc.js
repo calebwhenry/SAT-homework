@@ -94,15 +94,7 @@ function render() {
 
   const fb = $("mc-feedback");
   if (r) {
-    const [why, ...others] = r.rationale || [];
-    fb.innerHTML = `
-      <div class="fb-row ${r.correct ? "is-ok" : "is-bad"}">
-        <span class="fb-icon" aria-hidden="true">${r.correct ? "✓" : "✗"}</span>
-        <span class="fb-text">${r.correct ? `Correct. The answer is <b>${r.answer}</b>.`
-          : `You chose <b class="strike">${r.choice}</b>. The answer is <b>${r.answer}</b>.`}</span>
-      </div>
-      ${why ? `<p class="fb-why">${richText(why)}</p>` : ""}
-      ${others.length ? `<details class="fb-more"><summary>Why the other choices are wrong</summary>${others.map((p) => `<p class="fb-why">${richText(p)}</p>`).join("")}</details>` : ""}`;
+    fb.innerHTML = feedbackHtml(q, r);
     fb.hidden = false;
   } else {
     fb.hidden = true;
@@ -115,6 +107,35 @@ function render() {
   $("mc-next").classList.toggle("primary", !!r);
   $("mc-next").textContent = st.idx === st.questions.length - 1 ? "Finish" : "Next";
   paintStrip();
+}
+
+// Wrong answer: why your choice is wrong, then why the answer is right, then the other two (folded).
+// Right answer: why it's right, then the three wrong choices (folded).
+function feedbackHtml(q, r) {
+  const label = (L) => `${L} (${richText(q.choices[L] || "")})`;
+  const head = `
+    <div class="fb-row ${r.correct ? "is-ok" : "is-bad"}">
+      <span class="fb-icon" aria-hidden="true">${r.correct ? "✓" : "✗"}</span>
+      <span class="fb-text">${r.correct ? `Correct. The answer is <b>${r.answer}</b>.`
+        : `You chose <b class="strike">${r.choice}</b>. The answer is <b>${r.answer}</b>.`}</span>
+    </div>`;
+  const wrong = r.why_wrong || {};
+  if (!r.why_right || !Object.keys(wrong).length) {
+    // Older format: show the explanation paragraphs as they are.
+    const [why, ...others] = r.rationale || [];
+    return head + (why ? `<p class="fb-why">${richText(why)}</p>` : "") +
+      (others.length ? `<details class="fb-more"><summary>Why the other choices are wrong</summary>${others.map((p) => `<p class="fb-why">${richText(p)}</p>`).join("")}</details>` : "");
+  }
+  const section = (title, text, cls) => `<div class="fb-part ${cls}"><h4>${title}</h4><p class="fb-why">${richText(text)}</p></div>`;
+  let html = head;
+  if (!r.correct && wrong[r.choice]) html += section(`Why ${label(r.choice)} is wrong`, wrong[r.choice], "part-bad");
+  html += section(`Why ${label(r.answer)} is right`, r.why_right, "part-ok");
+  const rest = Object.keys(wrong).sort().filter((L) => L !== r.choice);
+  if (rest.length) {
+    html += `<details class="fb-more"><summary>Why ${rest.length === 3 ? "the other choices are" : rest.join(" and ") + " are"} wrong</summary>` +
+      rest.map((L) => section(`Choice ${label(L)}`, wrong[L], "")).join("") + `</details>`;
+  }
+  return html;
 }
 
 async function submit() {

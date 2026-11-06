@@ -66,7 +66,7 @@ export async function choiceQuestionIndex() {
 }
 
 export async function myChoiceResults() {
-  return check(await sb.rpc("my_choice_results"));
+  return check(await sb.rpc("my_choice_feedback"));
 }
 
 export async function submitChoice(questionId, choice) {

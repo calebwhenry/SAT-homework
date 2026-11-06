@@ -284,6 +284,14 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .choice.bad .choice-text { text-decoration: line-through; text-decoration-color: var(--bad); }
 .mc-feedback { margin-top: 18px; }
 .mc-feedback .fb-text b { font-family: var(--sans); }
+.fb-part { border-left: 3px solid var(--rule); padding-left: 12px; margin-top: 4px; }
+.fb-part h4 { margin: 0 0 2px; font-size: 0.95rem; }
+.fb-part .fb-why { margin: 0; }
+.fb-part.part-bad { border-left-color: var(--bad); }
+.fb-part.part-bad h4 { color: var(--bad); }
+.fb-part.part-ok { border-left-color: var(--ok); }
+.fb-part.part-ok h4 { color: var(--ok); }
+.fb-more .fb-part { margin-top: 10px; }
 .fb-more summary { cursor: pointer; font-weight: 600; color: var(--ink-2); margin-top: 4px; }
 .fb-more[open] summary { margin-bottom: 8px; }
 
