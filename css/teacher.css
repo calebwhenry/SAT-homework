@@ -50,3 +50,18 @@ tr.clickable.open td { background: var(--subj-soft); }
   .totals { grid-template-columns: repeat(2, 1fr); }
   .dash { padding: 16px 12px 48px; }
 }
+
+.set-tabs { display: flex; gap: 6px; margin-top: 18px; flex-wrap: wrap; }
+.set-tab {
+  border: 1px solid var(--rule); background: var(--sheet); border-radius: 999px;
+  padding: 8px 16px; font-weight: 600; cursor: pointer; color: var(--ink-2);
+}
+.set-tab[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.dist { display: flex; gap: 4px; }
+.dist span {
+  min-width: 34px; text-align: center; padding: 2px 4px; border-radius: 5px;
+  font-size: 0.8rem; font-weight: 600; background: #eef1f4; color: var(--ink-2);
+}
+.dist span.ans { background: var(--ok-soft); color: var(--ok); }
+.dist span.top-wrong { background: var(--bad-soft); color: var(--bad); }
+.stem-snip { font-family: var(--sans); font-size: 0.85rem; color: var(--ink-2); margin-top: 4px; }

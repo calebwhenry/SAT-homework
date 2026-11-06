@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Subject & Verb Practice</title>
+  <title>SAT Practice</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%232f5bea%22/%3E%3Crect x=%2216%22 y=%2216%22 width=%2212%22 height=%2210%22 rx=%223%22 fill=%22%23f2b705%22/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,11 +47,48 @@
     </form>
   </section>
 
+  <!-- Menu of practice sets -->
+  <section id="menu" class="screen menu" hidden>
+    <header class="topbar">
+      <div class="brand">SAT Practice</div>
+      <div class="who"><span class="who-name"></span> <button class="link sign-out">Sign out</button></div>
+    </header>
+    <main class="menu-main">
+      <h1 class="menu-title">Pick a practice set</h1>
+      <div id="set-list" class="set-list"></div>
+    </main>
+  </section>
+
+  <!-- Multiple choice -->
+  <section id="mc" class="screen practice" hidden>
+    <header class="topbar">
+      <button class="link back-menu" data-go="menu">All practice sets</button>
+      <div class="who"><span class="who-name"></span> <button class="link sign-out">Sign out</button></div>
+    </header>
+    <nav id="mc-strip" class="strip" aria-label="Questions"></nav>
+    <main class="sheet mc-sheet">
+      <section class="mc-left" aria-label="Passage">
+        <div class="sheet-head"><span id="mc-count"></span><span id="mc-title"></span></div>
+        <div id="mc-passage" class="mc-passage"></div>
+      </section>
+      <section class="mc-right" aria-label="Question">
+        <p id="mc-stem" class="mc-stem"></p>
+        <div id="mc-choices" class="mc-choices" role="radiogroup"></div>
+        <div id="mc-feedback" class="feedback mc-feedback" aria-live="polite" hidden></div>
+      </section>
+    </main>
+    <footer class="controls">
+      <button id="mc-back" class="btn">Back</button>
+      <div class="controls-mid"><button id="mc-submit" class="btn primary" disabled>Submit</button></div>
+      <button id="mc-next" class="btn">Next</button>
+    </footer>
+  </section>
+
   <!-- Practice -->
   <section id="practice" class="screen practice" hidden>
     <header class="topbar">
-      <div class="brand">Subject &amp; Verb Practice</div>
-      <div class="who"><span id="who-name"></span> <button id="sign-out" class="link">Sign out</button></div>
+      <button class="link back-menu" data-go="menu">All practice sets</button>
+      <div class="who"><span class="who-name"></span> <button class="link sign-out">Sign out</button></div>
     </header>
 
     <nav id="strip" class="strip" aria-label="Questions"></nav>
@@ -93,10 +130,13 @@
   <!-- Finished -->
   <section id="done" class="screen center" hidden>
     <div class="card done-card">
-      <h1 class="auth-title">All 55 answered</h1>
+      <h1 id="done-title" class="auth-title">All done</h1>
       <p id="done-score" class="done-score"></p>
       <p id="done-detail" class="muted"></p>
-      <button id="review" class="btn primary">Review my answers</button>
+      <div class="done-actions">
+        <button id="review" class="btn">Review my answers</button>
+        <button class="btn primary back-menu" data-go="menu">Back to all sets</button>
+      </div>
     </div>
   </section>
 

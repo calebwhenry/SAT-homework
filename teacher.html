@@ -44,13 +44,15 @@
 
   <section id="dash" class="dash" hidden>
     <header class="dash-top">
-      <h1 class="dash-title">Subject &amp; Verb Practice</h1>
+      <h1 class="dash-title">SAT Practice: teacher dashboard</h1>
       <div class="dash-actions">
         <span id="updated" class="muted-sm"></span>
         <button id="refresh" class="btn">Refresh</button>
         <button id="dash-out" class="link">Sign out</button>
       </div>
     </header>
+
+    <nav id="set-tabs" class="set-tabs" role="tablist" aria-label="Practice sets"></nav>
 
     <section class="totals" id="totals"></section>
 
@@ -66,7 +68,7 @@
     <section class="panel">
       <div class="panel-head">
         <h2>Questions, most missed first</h2>
-        <p class="muted-sm">"Top wrong pick" is the decoy students chose most often.</p>
+        <p class="muted-sm" id="questions-note">"Top wrong pick" is the decoy students chose most often.</p>
       </div>
       <div class="table-wrap"><table id="questions"></table></div>
     </section>

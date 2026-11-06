@@ -6,7 +6,9 @@ const $ = (id) => document.getElementById(id);
 const SCREENS = ["loading", "auth", "denied", "dash"];
 const show = (s) => SCREENS.forEach((x) => ($(x).hidden = x !== s));
 
-let data = null;
+let data = null;       // subject/verb data
+let choice = null;     // multiple-choice sets, attempts and keys
+let activeSet = "subject-verb";
 let openStudent = null;
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -32,7 +34,8 @@ async function start() {
 async function load() {
   $("refresh").disabled = true;
   try {
-    data = await api.teacherData();
+    [data, choice] = await Promise.all([api.teacherData(), api.teacherChoiceData()]);
+    renderTabs();
     render();
     $("updated").textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   } finally {
@@ -40,7 +43,28 @@ async function load() {
   }
 }
 
+function renderTabs() {
+  const nav = $("set-tabs");
+  nav.innerHTML = "";
+  for (const set of choice.sets) {
+    const b = document.createElement("button");
+    b.className = "set-tab";
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(set.id === activeSet));
+    b.textContent = set.title;
+    b.onclick = () => { activeSet = set.id; openStudent = null; renderTabs(); render(); };
+    nav.appendChild(b);
+  }
+}
+
 function render() {
+  const set = choice.sets.find((s) => s.id === activeSet);
+  if (set && set.kind === "multiple_choice") return renderChoice(set);
+  $("questions-note").textContent = '"Top wrong pick" is the decoy students chose most often.';
+  renderSubjectVerb();
+}
+
+function renderSubjectVerb() {
   const { students, attempts, keys } = data;
   const total = keys.length;
   const byStudent = new Map(students.map((s) => [s.user_id, []]));
@@ -137,6 +161,97 @@ function renderStudentDetail(row, keys) {
       }).join("")}</tbody></table>`
     : `<p class="muted-sm">${row.as.length ? "No misses so far." : "This student hasn't answered any questions yet."}</p>`}`;
   box.hidden = false;
+}
+
+// ---------- multiple-choice sets ----------
+
+const snippet = (html, n = 120) => {
+  const t = html.replace(/<[^>]+>/g, "").replace(/_{3,}/g, "____");
+  return t.length > n ? t.slice(0, n).trimEnd() + "…" : t;
+};
+
+function renderChoice(set) {
+  const students = data.students;
+  const keys = choice.keys.filter((k) => k.set_id === set.id);
+  const total = keys.length;
+  const keyIds = new Set(keys.map((k) => k.question_id));
+  const byStudent = new Map(students.map((s) => [s.user_id, []]));
+  for (const a of choice.attempts) if (keyIds.has(a.question_id) && byStudent.has(a.user_id)) byStudent.get(a.user_id).push(a);
+  const all = [...byStudent.values()].flat();
+
+  const finished = students.filter((s) => byStudent.get(s.user_id).length === total).length;
+  $("totals").innerHTML = [
+    [students.length, "students signed up"],
+    [finished, "finished all " + total],
+    [all.length, "answers submitted"],
+    [pct(all.filter((a) => a.correct).length, all.length), "correct"],
+  ].map(([n, l]) => `<div class="total"><span class="total-n">${n}</span><span class="total-l">${l}</span></div>`).join("");
+
+  const rows = students.map((s) => {
+    const as = byStudent.get(s.user_id);
+    return { s, as, right: as.filter((a) => a.correct).length,
+      last: as.reduce((m, a) => (a.created_at > m ? a.created_at : m), "") };
+  });
+  $("students").innerHTML = `
+    <thead><tr><th>Student</th><th class="num">Answered</th><th class="num">Correct</th><th>Last active</th></tr></thead>
+    <tbody>${rows.length ? rows.map((r) => `
+      <tr class="clickable${openStudent === r.s.user_id ? " open" : ""}" data-id="${r.s.user_id}" tabindex="0">
+        <td><div class="name">${esc(r.s.full_name)}</div><div class="muted-sm">${esc(r.s.email)}</div></td>
+        <td class="num">${r.as.length} / ${total}</td>
+        <td class="num"><b>${pct(r.right, r.as.length)}</b></td>
+        <td>${r.last ? new Date(r.last).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Not started"}</td>
+      </tr>`).join("") : `<tr><td colspan="4" class="empty">No students yet.</td></tr>`}
+    </tbody>`;
+  $("students").querySelectorAll("tr.clickable").forEach((tr) => {
+    const open = () => { openStudent = openStudent === tr.dataset.id ? null : tr.dataset.id; render(); };
+    tr.onclick = open;
+    tr.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } };
+  });
+
+  // Student detail: their misses
+  const row = rows.find((r) => r.s.user_id === openStudent);
+  const box = $("student-detail");
+  if (!row) box.hidden = true;
+  else {
+    const byQ = new Map(row.as.map((a) => [a.question_id, a]));
+    const misses = keys.filter((k) => byQ.has(k.question_id) && !byQ.get(k.question_id).correct);
+    box.innerHTML = `
+      <h3>${esc(row.s.full_name)}</h3>
+      <div class="strip mini">${keys.map((k) => {
+        const a = byQ.get(k.question_id);
+        return `<span class="seg ${a ? (a.correct ? "right" : "wrong") : ""}" title="Question ${k.q_position}"></span>`;
+      }).join("")}</div>
+      ${misses.length ? `<table class="misses"><thead><tr><th class="num">#</th><th>Question</th><th>Their pick</th><th>Answer</th></tr></thead><tbody>
+        ${misses.map((k) => {
+          const a = byQ.get(k.question_id);
+          return `<tr><td class="num qnum">${k.q_position}</td><td class="sent">${esc(snippet(k.passage[0]))}</td>
+            <td class="wrong-pick">${a.choice}. ${esc(k.choices[a.choice] || "")}</td><td>${k.answer}. ${esc(k.choices[k.answer] || "")}</td></tr>`;
+        }).join("")}</tbody></table>`
+        : `<p class="muted-sm">${row.as.length ? "No misses so far." : "This student hasn't answered any questions yet."}</p>`}`;
+    box.hidden = false;
+  }
+
+  // Questions, most missed first, with how often each choice was picked
+  $("questions-note").textContent = "Counts show how many students picked each choice. Green is the answer; red is the most popular wrong choice.";
+  const qrows = keys.map((k) => {
+    const as = all.filter((a) => a.question_id === k.question_id);
+    const counts = Object.fromEntries(["A", "B", "C", "D"].map((L) => [L, as.filter((a) => a.choice === L).length]));
+    const wrong = ["A", "B", "C", "D"].filter((L) => L !== k.answer && counts[L] > 0).sort((x, y) => counts[y] - counts[x])[0];
+    return { k, n: as.length, right: as.filter((a) => a.correct).length, counts, wrong };
+  }).sort((a, b) => (a.n ? a.right / a.n : 2) - (b.n ? b.right / b.n : 2) || b.n - a.n || a.k.q_position - b.k.q_position);
+  $("questions").innerHTML = `
+    <thead><tr><th class="num">#</th><th>Question</th><th class="num">Answers</th><th class="num">Correct</th><th>Picks</th></tr></thead>
+    <tbody>${qrows.map((r) => `
+      <tr>
+        <td class="num qnum">${r.k.q_position}</td>
+        <td class="sent"><div>${esc(snippet(r.k.passage[0], 160))}</div>
+          <div class="key">Answer: <b>${r.k.answer}. ${esc(r.k.choices[r.k.answer] || "")}</b></div></td>
+        <td class="num">${r.n}</td>
+        <td class="num">${bar(r.right, r.n)}</td>
+        <td><div class="dist">${["A", "B", "C", "D"].map((L) =>
+          `<span class="${L === r.k.answer ? "ans" : L === r.wrong ? "top-wrong" : ""}" title="${esc(r.k.choices[L] || "")}">${L} ${r.counts[L]}</span>`).join("")}</div></td>
+      </tr>`).join("")}
+    </tbody>`;
 }
 
 function topPick(words) {

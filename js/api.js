@@ -51,6 +51,36 @@ export async function submitAnswer(questionId, subject, predicate) {
   }));
 }
 
+export async function loadSets() {
+  return check(await sb.from("practice_sets").select("id, title, kind, position, blurb").order("position"));
+}
+
+export async function loadChoiceQuestions(setId) {
+  return check(await sb.from("choice_questions")
+    .select("id, set_id, position, difficulty, passage, stem, choices").eq("set_id", setId).order("position"));
+}
+
+// [{ id, set_id }] for every multiple-choice question, used to count progress per set.
+export async function choiceQuestionIndex() {
+  return check(await sb.from("choice_questions").select("id, set_id"));
+}
+
+export async function myChoiceResults() {
+  return check(await sb.rpc("my_choice_results"));
+}
+
+export async function submitChoice(questionId, choice) {
+  return check(await sb.rpc("submit_choice", { p_question_id: questionId, p_choice: choice }));
+}
+
+export async function teacherChoiceData() {
+  const [sets, attempts, keys] = await Promise.all([
+    sb.from("practice_sets").select("id, title, kind, position").order("position"),
+    sb.rpc("teacher_choice_attempts"), sb.rpc("teacher_choice_keys"),
+  ]);
+  return { sets: check(sets), attempts: check(attempts), keys: check(keys) };
+}
+
 export async function isTeacher() {
   return check(await sb.rpc("is_teacher"));
 }

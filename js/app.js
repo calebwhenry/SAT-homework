@@ -1,9 +1,8 @@
-// Student practice page.
+// Student page: sign-in, set menu, and the subject/verb practice.
 import * as api from "./api.js";
 import { showAuth } from "./auth.js";
-
-const $ = (id) => document.getElementById(id);
-const SCREENS = ["loading", "auth", "profile", "practice", "done"];
+import { $, show, esc, showDone as showDoneScreen } from "./ui.js";
+import { openChoiceSet } from "./mc.js";
 
 const state = {
   questions: [],
@@ -11,11 +10,9 @@ const state = {
   drafts: {},    // question id -> { s: Set, p: Set, step }
   idx: 0,
   busy: false,
+  loaded: false,
 };
-
-function show(screen) {
-  for (const s of SCREENS) $(s).hidden = s !== screen;
-}
+let sets = [];
 
 // Split a word into leading punctuation, the clickable core, and trailing punctuation.
 function splitWord(w) {
@@ -52,13 +49,62 @@ async function start() {
     profile = { full_name: fullName };
   }
   if (!profile) profile = { full_name: await askName(user.id) };
-  $("who-name").textContent = profile.full_name;
+  document.querySelectorAll(".who-name").forEach((el) => (el.textContent = profile.full_name));
 
-  const [questions, results] = await Promise.all([api.loadQuestions(), api.myResults()]);
-  state.questions = questions;
-  for (const r of results) state.results[r.question_id] = r;
+  sets = await api.loadSets();
+  window.addEventListener("hashchange", route);
+  await route();
+}
 
-  buildStrip();
+// #subject-verb, #<multiple-choice set id>, or the menu
+async function route() {
+  const id = decodeURIComponent(location.hash.slice(1));
+  const set = sets.find((x) => x.id === id);
+  if (!set) return showMenu();
+  show("loading");
+  if (set.kind === "subject_verb") return openSubjectVerb();
+  return openChoiceSet(set);
+}
+
+async function showMenu() {
+  show("loading");
+  const [svResults, index, choiceResults] = await Promise.all([api.myResults(), api.choiceQuestionIndex(), api.myChoiceResults()]);
+  const done = new Map(choiceResults.map((r) => [r.question_id, r]));
+  const list = $("set-list");
+  list.innerHTML = "";
+  for (const set of sets) {
+    let total, answered, right;
+    if (set.kind === "subject_verb") {
+      total = state.questions.length || 55;
+      answered = svResults.length;
+      right = svResults.filter((r) => r.subject_correct && r.predicate_correct).length;
+    } else {
+      const qs = index.filter((q) => q.set_id === set.id);
+      total = qs.length;
+      const rs = qs.map((q) => done.get(q.id)).filter(Boolean);
+      answered = rs.length;
+      right = rs.filter((r) => r.correct).length;
+    }
+    const a = document.createElement("a");
+    a.className = "set-card";
+    a.href = "#" + encodeURIComponent(set.id);
+    a.innerHTML = `
+      <span class="set-name">${esc(set.title)}</span>
+      <span class="set-meta">${answered === 0 ? `${total} questions` : answered >= total ? `Finished: ${right} of ${total} right` : `${answered} of ${total} answered, ${right} right`}</span>
+      <span class="set-bar"><span style="width:${total ? Math.round((100 * answered) / total) : 0}%"></span></span>`;
+    list.appendChild(a);
+  }
+  show("menu");
+}
+
+async function openSubjectVerb() {
+  if (!state.loaded) {
+    const [questions, results] = await Promise.all([api.loadQuestions(), api.myResults()]);
+    state.questions = questions;
+    for (const r of results) state.results[r.question_id] = r;
+    buildStrip();
+    state.loaded = true;
+  }
   const next = firstUnanswered();
   if (next === -1) return showDone();
   show("practice");
@@ -234,10 +280,6 @@ function renderFeedback(q, r) {
   fb.hidden = false;
 }
 
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
 // ---------- interaction ----------
 
 function pick(i) {
@@ -290,9 +332,12 @@ function showDone() {
   const subj = rs.filter((r) => r.subject_correct).length;
   const verb = rs.filter((r) => r.predicate_correct).length;
   const n = state.questions.length;
-  $("done-score").textContent = `${both} of ${n} fully correct`;
-  $("done-detail").textContent = `Subjects: ${subj} of ${n}. Verbs: ${verb} of ${n}.`;
-  show("done");
+  showDoneScreen({
+    title: "Subject & Verb: all " + n + " answered",
+    score: `${both} of ${n} fully correct`,
+    detail: `Subjects: ${subj} of ${n}. Verbs: ${verb} of ${n}.`,
+    onReview: () => { show("practice"); goTo(0); },
+  });
 }
 
 $("step-s").onclick = () => setStep("subject");
@@ -301,8 +346,10 @@ $("continue").onclick = () => setStep("predicate");
 $("submit").onclick = submit;
 $("back").onclick = () => goTo(state.idx - 1);
 $("next").onclick = next;
-$("review").onclick = () => { show("practice"); goTo(0); };
-$("sign-out").onclick = async () => { await api.signOut(); location.reload(); };
+document.querySelectorAll(".sign-out").forEach((b) => (b.onclick = async () => { await api.signOut(); location.hash = ""; location.reload(); }));
+document.querySelectorAll(".back-menu").forEach((b) => (b.onclick = () => {
+  if (location.hash) location.hash = ""; else showMenu();
+}));
 
 document.addEventListener("keydown", (e) => {
   if ($("practice").hidden || e.target.closest("input, textarea")) return;
