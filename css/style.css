@@ -1,0 +1,241 @@
+:root {
+  --bg: #eef1f4;
+  --sheet: #ffffff;
+  --ink: #1b2430;
+  --ink-2: #4a5566;
+  --ink-3: #7d8796;
+  --rule: #d8dde4;
+
+  --subj: #2f5bea;
+  --subj-soft: rgba(47, 91, 234, 0.16);
+  --verb: #f2b705;
+  --verb-ink: #3a2c00;
+  --verb-soft: rgba(242, 183, 5, 0.3);
+
+  --ok: #1e8a5a;
+  --ok-soft: #e3f3eb;
+  --bad: #c8372d;
+  --bad-soft: #fbe9e7;
+  --half: #e08a1e;
+
+  --serif: "Source Serif 4", Georgia, serif;
+  --sans: "Public Sans", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible, a:focus-visible {
+  outline: 3px solid var(--subj);
+  outline-offset: 2px;
+}
+
+.screen { min-height: 100dvh; }
+.center { display: grid; place-items: center; padding: 24px 16px; }
+.muted { color: var(--ink-2); margin: 0 0 20px; }
+.error { color: var(--bad); margin: 0 0 14px; font-weight: 500; }
+
+/* ---------- cards & forms ---------- */
+.card {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  padding: 32px;
+  width: min(420px, 100%);
+  box-shadow: 0 1px 0 rgba(27, 36, 48, 0.04);
+}
+.auth-title {
+  font: 600 1.75rem/1.2 var(--serif);
+  margin: 0 0 8px;
+}
+.tabs {
+  display: grid; grid-template-columns: 1fr 1fr;
+  background: var(--bg); border-radius: 9px; padding: 4px; margin-bottom: 20px;
+}
+.tab {
+  border: 0; background: transparent; padding: 8px; border-radius: 6px;
+  font-weight: 600; color: var(--ink-2); cursor: pointer;
+}
+.tab[aria-selected="true"] { background: var(--sheet); color: var(--ink); box-shadow: 0 1px 2px rgba(27, 36, 48, 0.12); }
+.field { display: grid; gap: 6px; font-weight: 600; font-size: 0.9rem; margin-bottom: 14px; }
+.field input {
+  font: 400 1rem var(--sans); padding: 11px 12px;
+  border: 1px solid var(--rule); border-radius: 8px; background: #fff; color: var(--ink);
+}
+
+.btn {
+  border: 1px solid var(--rule); background: var(--sheet);
+  padding: 11px 22px; border-radius: 9px; font-weight: 600; cursor: pointer;
+  transition: background-color 120ms, border-color 120ms, opacity 120ms;
+}
+.btn:hover:not(:disabled) { border-color: var(--ink-3); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; }
+.btn.primary:hover:not(:disabled) { background: #2c3a4d; }
+.btn.guide { background: var(--subj); border-color: var(--subj); color: #fff; }
+.btn.wide { width: 100%; margin-top: 6px; }
+.link { border: 0; background: none; color: var(--ink-2); text-decoration: underline; cursor: pointer; padding: 0; }
+
+/* ---------- practice layout: fits the screen, no scrolling ---------- */
+.practice {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+}
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 24px 10px; font-size: 0.95rem;
+}
+.brand { font: 600 1.05rem var(--serif); }
+.who { color: var(--ink-2); display: flex; gap: 14px; align-items: center; }
+
+/* The progress strip: one segment per question, also used to jump around */
+.strip {
+  display: flex; gap: 3px; padding: 0 24px 14px;
+}
+.seg {
+  flex: 1; height: 10px; min-width: 0; padding: 0;
+  border: 0; border-radius: 3px; background: #d3d9e1; cursor: pointer;
+  transition: transform 120ms;
+}
+.seg:hover { transform: scaleY(1.5); }
+.seg.right { background: var(--ok); }
+.seg.half { background: var(--half); }
+.seg.wrong { background: var(--bad); }
+.seg.here { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink); }
+
+.sheet {
+  margin: 0 24px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  padding: 22px max(40px, calc(50% - 480px)) 24px;
+  display: flex; flex-direction: column;
+  min-height: 0; overflow: auto;
+}
+.sheet-head { display: flex; justify-content: space-between; color: var(--ink-3); font-size: 0.9rem; font-weight: 500; }
+
+.steps { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+.step {
+  display: flex; align-items: center; gap: 12px;
+  border: 2px solid var(--rule); background: var(--sheet);
+  border-radius: 12px; padding: 9px 16px 9px 10px; cursor: pointer; text-align: left;
+  min-width: 220px; transition: border-color 120ms, background-color 120ms;
+}
+.step:disabled { cursor: default; }
+.step-n {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 700; font-size: 0.9rem; background: var(--bg); color: var(--ink-2); flex: none;
+}
+.step-text { display: grid; line-height: 1.25; }
+.step-label { font-size: 0.8rem; color: var(--ink-2); font-weight: 600; }
+.step-pick { font: 500 1.05rem var(--serif); color: var(--ink-3); }
+.step.filled .step-pick { color: var(--ink); }
+#step-s.active { border-color: var(--subj); background: var(--subj-soft); }
+#step-s.active .step-n, #step-s.filled .step-n { background: var(--subj); color: #fff; }
+#step-p.active { border-color: #d9a300; background: var(--verb-soft); }
+#step-p.active .step-n, #step-p.filled .step-n { background: var(--verb); color: var(--verb-ink); }
+
+.prompt { margin: 14px 0 0; color: var(--ink-2); min-height: 1.5em; }
+
+/* ---------- the sentence ---------- */
+.sentence {
+  flex: 1;
+  display: block;
+  align-content: center;
+  font-family: var(--serif);
+  font-size: var(--fs, 2rem);
+  line-height: 1.95;
+  max-width: 42ch;
+  margin: 14px 0;
+  padding: 4px 0;
+  text-wrap: pretty;
+}
+.token { white-space: nowrap; }
+.w {
+  position: relative;
+  display: inline-block;
+  border: 0; background: transparent;
+  font: inherit; line-height: 1.2; color: inherit;
+  padding: 0.04em 0.2em 0.08em; margin: 0 -0.15em;
+  border-radius: 0.3em;
+  cursor: pointer;
+  transition: background-color 90ms, color 90ms, box-shadow 90ms;
+}
+.w:disabled { cursor: default; color: inherit; }
+
+/* Hover: a translucent bubble in the current step's color */
+.sentence[data-mode="subject"] .w:hover { background: var(--subj-soft); }
+.sentence[data-mode="predicate"] .w:hover { background: var(--verb-soft); }
+
+/* Selected: solid, pronounced */
+.w.sel-s, .sentence .w.sel-s:hover { background: var(--subj); color: #fff; }
+.w.sel-p, .sentence .w.sel-p:hover { background: var(--verb); color: var(--verb-ink); }
+
+/* Graded */
+.w.ok { background: var(--ok); color: #fff; }
+.w.bad { background: var(--bad); color: #fff; text-decoration: line-through; text-decoration-thickness: 0.06em; }
+.w.miss { box-shadow: inset 0 0 0 0.09em var(--ok); color: var(--ok); }
+.w[data-tag]::after {
+  content: attr(data-tag);
+  position: absolute; left: 50%; bottom: -1.3em; transform: translateX(-50%);
+  font: 700 0.38em/1 var(--sans); letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+
+/* ---------- feedback ---------- */
+.feedback {
+  border-top: 1px solid var(--rule);
+  padding-top: 14px;
+  display: grid; gap: 8px;
+  animation: rise 220ms ease-out;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+.fb-row { display: flex; align-items: baseline; gap: 10px; }
+.fb-icon {
+  width: 24px; height: 24px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 0.85rem;
+  align-self: center;
+}
+.is-ok .fb-icon { background: var(--ok); }
+.is-bad .fb-icon { background: var(--bad); }
+.fb-label { font-weight: 700; width: 64px; flex: none; }
+.fb-text b { font-family: var(--serif); font-weight: 600; font-size: 1.08em; }
+.fb-text .strike { text-decoration: line-through; color: var(--bad); }
+.fb-why { margin: 4px 0 0; color: var(--ink-2); max-width: 75ch; }
+
+/* ---------- bottom controls ---------- */
+.controls {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 24px 18px;
+}
+.controls-mid { display: flex; gap: 10px; }
+.controls .btn { min-width: 110px; }
+
+/* ---------- done ---------- */
+.done-card { text-align: center; }
+.done-score { font: 600 2.2rem/1.2 var(--serif); margin: 12px 0 6px; }
+
+/* ---------- small screens ---------- */
+@media (max-width: 640px) {
+  .topbar, .strip, .controls { padding-left: 12px; padding-right: 12px; }
+  .brand { display: none; }
+  .strip { gap: 2px; }
+  .sheet { margin: 0 12px; padding: 16px 18px 18px; }
+  .step { min-width: 0; flex: 1; }
+  .controls .btn { min-width: 0; padding: 11px 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
