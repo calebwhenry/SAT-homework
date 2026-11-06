@@ -1,2 +1,5 @@
 __pycache__/
 .DS_Store
+
+# Extracted question-bank content stays out of the public repo
+supabase/sets/*.json
