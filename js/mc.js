@@ -1,6 +1,6 @@
 // Multiple-choice practice (question-bank sets), one question at a time.
-import * as api from "./api.js?v=20261106033338";
-import { $, show, esc, richText, showDone } from "./ui.js?v=20261106033338";
+import * as api from "./api.js?v=20261113114913";
+import { $, show, esc, richText, showDone } from "./ui.js?v=20261113114913";
 
 const LETTERS = ["A", "B", "C", "D"];
 const st = {

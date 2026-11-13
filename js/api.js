@@ -1,6 +1,6 @@
 // Every call to Supabase goes through this file.
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-import { SUPABASE_URL, SUPABASE_KEY } from "./config.js?v=20261106033338";
+import { SUPABASE_URL, SUPABASE_KEY } from "./config.js?v=20261113114913";
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -52,7 +52,7 @@ export async function submitAnswer(questionId, subject, predicate) {
 }
 
 export async function loadSets() {
-  return check(await sb.from("practice_sets").select("id, title, kind, position, blurb").order("position"));
+  return check(await sb.from("practice_sets").select("id, title, kind, position, homework, blurb").order("homework").order("position"));
 }
 
 export async function loadChoiceQuestions(setId) {
@@ -75,10 +75,33 @@ export async function submitChoice(questionId, choice) {
 
 export async function teacherChoiceData() {
   const [sets, attempts, keys] = await Promise.all([
-    sb.from("practice_sets").select("id, title, kind, position").order("position"),
+    sb.from("practice_sets").select("id, title, kind, position, homework").order("homework").order("position"),
     sb.rpc("teacher_choice_attempts"), sb.rpc("teacher_choice_keys"),
   ]);
   return { sets: check(sets), attempts: check(attempts), keys: check(keys) };
+}
+
+export async function loadTrimQuestions(setId) {
+  return check(await sb.from("trim_questions").select("id, set_id, position, sentence, words").eq("set_id", setId).order("position"));
+}
+
+export async function trimQuestionIndex() {
+  return check(await sb.from("trim_questions").select("id, set_id"));
+}
+
+export async function myTrimResults() {
+  return check(await sb.rpc("my_trim_results"));
+}
+
+export async function submitTrim(questionId, removed, subject, predicate) {
+  return check(await sb.rpc("submit_trim", {
+    p_question_id: questionId, p_removed: removed, p_subject: subject, p_predicate: predicate,
+  }));
+}
+
+export async function teacherTrimData() {
+  const [attempts, keys] = await Promise.all([sb.rpc("teacher_trim_attempts"), sb.rpc("teacher_trim_keys")]);
+  return { attempts: check(attempts), keys: check(keys) };
 }
 
 export async function isTeacher() {

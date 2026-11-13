@@ -3,20 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F2F2F7">
   <title>SAT Practice</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%227%22 fill=%22%232f5bea%22/%3E%3Crect x=%2216%22 y=%2216%22 width=%2212%22 height=%2210%22 rx=%223%22 fill=%22%23f2b705%22/%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=20261106033338">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css?v=20261113114913">
+  <link rel="stylesheet" href="css/style.css?v=20261113114913">
 </head>
 <body>
   <!-- Sign in / create account -->
   <section id="auth" class="screen center" hidden>
     <form id="auth-form" class="card auth-card" novalidate>
-      <h1 class="auth-title">Subject &amp; Verb Practice</h1>
-      <p class="muted">Find the simple subject and simple predicate in 55 SAT-style sentences.</p>
-      <div class="tabs" role="tablist">
+      <img class="auth-logo" src="assets/logo.png" alt="" width="56" height="56">
+      <h1 class="auth-title">SAT Practice</h1>
+      <p class="muted">Sign in to do this week's homework.</p>
+      <div class="segmented tabs" role="tablist">
         <button type="button" role="tab" class="tab" data-mode="signin" aria-selected="true">Sign in</button>
         <button type="button" role="tab" class="tab" data-mode="signup" aria-selected="false">Create account</button>
       </div>
@@ -37,6 +42,7 @@
   <!-- Name prompt for accounts without a profile -->
   <section id="profile" class="screen center" hidden>
     <form id="profile-form" class="card auth-card">
+      <img class="auth-logo" src="assets/logo.png" alt="" width="56" height="56">
       <h1 class="auth-title">What's your name?</h1>
       <p class="muted">Your teacher sees this next to your scores.</p>
       <label class="field">Full name
@@ -47,28 +53,33 @@
     </form>
   </section>
 
-  <!-- Menu of practice sets -->
-  <section id="menu" class="screen menu" hidden>
-    <header class="topbar">
-      <div class="brand">SAT Practice</div>
-      <div class="who"><span class="who-name"></span> <button class="link sign-out">Sign out</button></div>
+  <!-- Home: homework sections -->
+  <section id="menu" class="screen home" hidden>
+    <header class="toolbar glass" data-refract>
+      <div class="brand"><img src="assets/logo.png" alt="" width="26" height="26"><span>SAT Practice</span></div>
+      <div class="who"><span class="who-name"></span><button class="pill-btn sign-out">Sign out</button></div>
     </header>
-    <main class="menu-main">
-      <h1 class="menu-title">Pick a practice set</h1>
-      <div id="set-list" class="set-list"></div>
+    <div class="scroll-edge" aria-hidden="true"></div>
+    <main class="home-main">
+      <h1 class="home-title" id="hello">Your homework</h1>
+      <p class="home-sub">One question at a time. You'll see if you're right as soon as you submit.</p>
+      <a id="up-next" class="btn primary up-next" href="#" hidden></a>
+      <div id="set-list" class="homework-list"></div>
     </main>
   </section>
 
   <!-- Multiple choice -->
   <section id="mc" class="screen practice" hidden>
-    <header class="topbar">
-      <button class="link back-menu" data-go="menu">All practice sets</button>
-      <div class="who"><span class="who-name"></span> <button class="link sign-out">Sign out</button></div>
+    <header class="toolbar glass practice-bar">
+      <div class="bar-row">
+        <button class="pill-btn back-menu" data-go="menu"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>Homework</button>
+        <div class="bar-title"><span id="mc-title" class="bar-set"></span><span id="mc-count" class="bar-count"></span></div>
+        <div class="who"><span class="who-name"></span><button class="pill-btn sign-out">Sign out</button></div>
+      </div>
+      <nav id="mc-strip" class="strip" aria-label="Questions"></nav>
     </header>
-    <nav id="mc-strip" class="strip" aria-label="Questions"></nav>
     <main class="sheet mc-sheet">
       <section class="mc-left" aria-label="Passage">
-        <div class="sheet-head"><span id="mc-count"></span><span id="mc-title"></span></div>
         <div id="mc-passage" class="mc-passage"></div>
       </section>
       <section class="mc-right" aria-label="Question">
@@ -78,70 +89,109 @@
       </section>
     </main>
     <footer class="controls">
-      <button id="mc-back" class="btn">Back</button>
-      <div class="controls-mid"><button id="mc-submit" class="btn primary" disabled>Submit</button></div>
-      <button id="mc-next" class="btn">Next</button>
+      <div class="dock glass" data-refract>
+        <button id="mc-back" class="btn">Back</button>
+        <button id="mc-submit" class="btn primary" disabled>Submit</button>
+        <button id="mc-next" class="btn">Next</button>
+      </div>
     </footer>
   </section>
 
-  <!-- Practice -->
+  <!-- Subject & verb -->
   <section id="practice" class="screen practice" hidden>
-    <header class="topbar">
-      <button class="link back-menu" data-go="menu">All practice sets</button>
-      <div class="who"><span class="who-name"></span> <button class="link sign-out">Sign out</button></div>
+    <header class="toolbar glass practice-bar">
+      <div class="bar-row">
+        <button class="pill-btn back-menu" data-go="menu"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>Homework</button>
+        <div class="bar-title"><span id="q-set" class="bar-set"></span><span id="q-count" class="bar-count"></span></div>
+        <div class="who"><span class="who-name"></span><button class="pill-btn sign-out">Sign out</button></div>
+      </div>
+      <nav id="strip" class="strip" aria-label="Questions"></nav>
     </header>
 
-    <nav id="strip" class="strip" aria-label="Questions"></nav>
-
     <main class="sheet">
-      <div class="sheet-head">
-        <span id="q-count" class="q-count"></span>
-        <span id="q-set" class="q-set"></span>
-      </div>
-
       <div class="steps" role="group" aria-label="Answer steps">
-        <button id="step-s" class="step" data-step="subject">
+        <button id="step-s" class="step step-s" data-step="subject">
           <span class="step-n">1</span>
-          <span class="step-text"><span class="step-label">Simple subject</span><span class="step-pick" id="pick-s">Click a word</span></span>
+          <span class="step-text"><span class="step-label"><span class="long">Simple subject</span><span class="short">Subject</span></span><span class="step-pick" id="pick-s">Click a word</span></span>
         </button>
-        <button id="step-p" class="step" data-step="predicate">
+        <button id="step-p" class="step step-p" data-step="predicate">
           <span class="step-n">2</span>
-          <span class="step-text"><span class="step-label">Verb (simple predicate)</span><span class="step-pick" id="pick-p">Click a word</span></span>
+          <span class="step-text"><span class="step-label"><span class="long">Verb (simple predicate)</span><span class="short">Verb</span></span><span class="step-pick" id="pick-p">Click a word</span></span>
         </button>
       </div>
-
       <p id="prompt" class="prompt" aria-live="polite"></p>
-
       <div id="sentence" class="sentence"></div>
-
       <div id="feedback" class="feedback" aria-live="polite" hidden></div>
     </main>
 
     <footer class="controls">
-      <button id="back" class="btn">Back</button>
-      <div class="controls-mid">
-        <button id="continue" class="btn guide" hidden>Continue to verb</button>
+      <div class="dock glass" data-refract>
+        <button id="back" class="btn">Back</button>
+        <button id="continue" class="btn primary" hidden>Continue to verb</button>
         <button id="submit" class="btn primary" disabled>Submit</button>
+        <button id="next" class="btn">Next</button>
       </div>
-      <button id="next" class="btn">Next</button>
+    </footer>
+  </section>
+
+  <!-- Cross out, then find -->
+  <section id="trim" class="screen practice" hidden>
+    <header class="toolbar glass practice-bar">
+      <div class="bar-row">
+        <button class="pill-btn back-menu" data-go="menu"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5"/></svg>Homework</button>
+        <div class="bar-title"><span id="trim-title" class="bar-set"></span><span id="trim-count" class="bar-count"></span></div>
+        <div class="who"><span class="who-name"></span><button class="pill-btn sign-out">Sign out</button></div>
+      </div>
+      <nav id="trim-strip" class="strip" aria-label="Questions"></nav>
+    </header>
+
+    <main class="sheet">
+      <div class="steps" role="group" aria-label="Answer steps">
+        <button id="trim-step-x" class="step step-x" data-step="cut">
+          <span class="step-n">1</span>
+          <span class="step-text"><span class="step-label"><span class="long">Cross out extra info</span><span class="short">Cross out</span></span><span class="step-pick" id="trim-pick-x">Click or drag across words</span></span>
+        </button>
+        <button id="trim-step-s" class="step step-s" data-step="subject">
+          <span class="step-n">2</span>
+          <span class="step-text"><span class="step-label"><span class="long">Simple subject</span><span class="short">Subject</span></span><span class="step-pick" id="trim-pick-s">Click a word</span></span>
+        </button>
+        <button id="trim-step-p" class="step step-p" data-step="predicate">
+          <span class="step-n">3</span>
+          <span class="step-text"><span class="step-label"><span class="long">Verb (simple predicate)</span><span class="short">Verb</span></span><span class="step-pick" id="trim-pick-p">Click a word</span></span>
+        </button>
+      </div>
+      <p id="trim-prompt" class="prompt" aria-live="polite"></p>
+      <div id="trim-sentence" class="sentence"></div>
+      <div id="trim-feedback" class="feedback" aria-live="polite" hidden></div>
+    </main>
+
+    <footer class="controls">
+      <div class="dock glass" data-refract>
+        <button id="trim-back" class="btn">Back</button>
+        <button id="trim-continue" class="btn primary" hidden>Done crossing out</button>
+        <button id="trim-submit" class="btn primary" disabled>Submit</button>
+        <button id="trim-next" class="btn">Next</button>
+      </div>
     </footer>
   </section>
 
   <!-- Finished -->
   <section id="done" class="screen center" hidden>
     <div class="card done-card">
+      <img class="auth-logo" src="assets/logo.png" alt="" width="56" height="56">
       <h1 id="done-title" class="auth-title">All done</h1>
       <p id="done-score" class="done-score"></p>
       <p id="done-detail" class="muted"></p>
       <div class="done-actions">
         <button id="review" class="btn">Review my answers</button>
-        <button class="btn primary back-menu" data-go="menu">Back to all sets</button>
+        <button class="btn primary back-menu" data-go="menu">Back to homework</button>
       </div>
     </div>
   </section>
 
-  <div id="loading" class="screen center"><p class="muted">Loading…</p></div>
+  <div id="loading" class="screen center"><div class="spinner" role="status" aria-label="Loading"></div></div>
 
-  <script type="module" src="js/app.js?v=20261106033338"></script>
+  <script src="js/refraction.js?v=20261113114913" defer></script>
+  <script type="module" src="js/app.js?v=20261113114913"></script>
 </body>
 </html>

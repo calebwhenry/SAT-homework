@@ -1,8 +1,9 @@
 // Student page: sign-in, set menu, and the subject/verb practice.
-import * as api from "./api.js?v=20261106033338";
-import { showAuth } from "./auth.js?v=20261106033338";
-import { $, show, esc, showDone as showDoneScreen } from "./ui.js?v=20261106033338";
-import { openChoiceSet } from "./mc.js?v=20261106033338";
+import * as api from "./api.js?v=20261113114913";
+import { showAuth } from "./auth.js?v=20261113114913";
+import { $, show, esc, showDone as showDoneScreen } from "./ui.js?v=20261113114913";
+import { openTrimSet } from "./trim.js?v=20261113114913";
+import { openChoiceSet } from "./mc.js?v=20261113114913";
 
 const state = {
   questions: [],
@@ -50,6 +51,8 @@ async function start() {
   }
   if (!profile) profile = { full_name: await askName(user.id) };
   document.querySelectorAll(".who-name").forEach((el) => (el.textContent = profile.full_name));
+  const first = profile.full_name.trim().split(/\s+/)[0];
+  $("hello").textContent = first ? `Hi, ${first}` : "Your homework";
 
   sets = await api.loadSets();
   window.addEventListener("hashchange", route);
@@ -63,38 +66,94 @@ async function route() {
   if (!set) return showMenu();
   show("loading");
   if (set.kind === "subject_verb") return openSubjectVerb();
+  if (set.kind === "trim_subject_verb") return openTrimSet(set);
   return openChoiceSet(set);
+}
+
+const ICONS = {
+  // cursor-in-text: pick words in a sentence
+  subject_verb: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M4 12h6M4 17h9"/><path d="M17 5v14M15 5h4M15 19h4"/></svg>',
+  // open book: reading passages
+  multiple_choice: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5C10 5 7.5 4.5 4 4.8v13.4c3.5-.3 6 .2 8 1.8 2-1.6 4.5-2.1 8-1.8V4.8c-3.5-.3-6 .2-8 1.7Z"/><path d="M12 6.5V20"/></svg>',
+  // struck-through lines: cross out, then find
+  trim_subject_verb: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h7"/><path d="M3 12h18" stroke-width="2.4"/><path d="M15 17h5"/></svg>',
+};
+
+function ring(answered, total) {
+  const r = 14, c = 2 * Math.PI * r, f = total ? answered / total : 0;
+  return `<svg class="ring${total && answered >= total ? " complete" : ""}" viewBox="0 0 34 34" aria-hidden="true">
+    <circle class="track" cx="17" cy="17" r="${r}"/>
+    <circle class="fill" cx="17" cy="17" r="${r}" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${(c * (1 - f)).toFixed(2)}"/></svg>`;
 }
 
 async function showMenu() {
   show("loading");
-  const [svResults, index, choiceResults] = await Promise.all([api.myResults(), api.choiceQuestionIndex(), api.myChoiceResults()]);
-  const done = new Map(choiceResults.map((r) => [r.question_id, r]));
+  const [svResults, index, choiceResults, trimIndex, trimResults] = await Promise.all([
+    api.myResults(), api.choiceQuestionIndex(), api.myChoiceResults(), api.trimQuestionIndex(), api.myTrimResults(),
+  ]);
+  const choiceDone = new Map(choiceResults.map((r) => [r.question_id, r]));
+  const trimDone = new Map(trimResults.map((r) => [r.question_id, r]));
+
+  const progress = (set) => {
+    if (set.kind === "subject_verb") {
+      return { total: state.questions.length || 55, answered: svResults.length,
+               right: svResults.filter((r) => r.subject_correct && r.predicate_correct).length };
+    }
+    const [idx, done, ok] = set.kind === "trim_subject_verb"
+      ? [trimIndex, trimDone, (r) => r.removal_correct && r.subject_correct && r.predicate_correct]
+      : [index, choiceDone, (r) => r.correct];
+    const rs = idx.filter((q) => q.set_id === set.id).map((q) => done.get(q.id));
+    return { total: rs.length, answered: rs.filter(Boolean).length, right: rs.filter((r) => r && ok(r)).length };
+  };
+
+  const weeks = [...new Set(sets.map((x) => x.homework))].sort((a, b) => b - a);
   const list = $("set-list");
   list.innerHTML = "";
-  for (const set of sets) {
-    let total, answered, right;
-    if (set.kind === "subject_verb") {
-      total = state.questions.length || 55;
-      answered = svResults.length;
-      right = svResults.filter((r) => r.subject_correct && r.predicate_correct).length;
-    } else {
-      const qs = index.filter((q) => q.set_id === set.id);
-      total = qs.length;
-      const rs = qs.map((q) => done.get(q.id)).filter(Boolean);
-      answered = rs.length;
-      right = rs.filter((r) => r.correct).length;
+  let i = 0;
+  weeks.forEach((hw, w) => {
+    const sec = document.createElement("section");
+    sec.className = "homework rise";
+    sec.style.setProperty("--i", i++);
+    sec.innerHTML = `<div class="homework-head"><h2>Homework ${hw}</h2>${w === 0 ? '<span class="chip-now">This week</span>' : ""}</div>
+      <div class="list-group"></div>`;
+    const group = sec.querySelector(".list-group");
+    for (const set of sets.filter((x) => x.homework === hw).sort((a, b) => a.position - b.position)) {
+      const { total, answered, right } = progress(set);
+      const meta = answered === 0 ? `${total} questions`
+        : answered >= total ? `Finished: ${right} of ${total} right`
+        : `${answered} of ${total} answered, ${right} right`;
+      const a = document.createElement("a");
+      a.className = "set-row";
+      a.href = "#" + encodeURIComponent(set.id);
+      a.innerHTML = `
+        <span class="set-icon">${ICONS[set.kind] || ICONS.subject_verb}</span>
+        <span class="set-text"><span class="set-name">${esc(set.title)}</span>
+          ${set.blurb ? `<span class="set-blurb">${esc(set.blurb)}</span>` : ""}
+          <span class="set-meta${answered && answered >= total ? " done" : ""}">${meta}</span></span>
+        ${ring(answered, total)}
+        <svg class="chev" viewBox="0 0 14 14" aria-hidden="true"><path d="m5 2.5 4.5 4.5L5 11.5"/></svg>`;
+      group.appendChild(a);
     }
-    const a = document.createElement("a");
-    a.className = "set-card";
-    a.href = "#" + encodeURIComponent(set.id);
-    a.innerHTML = `
-      <span class="set-name">${esc(set.title)}</span>
-      <span class="set-meta">${answered === 0 ? `${total} questions` : answered >= total ? `Finished: ${right} of ${total} right` : `${answered} of ${total} answered, ${right} right`}</span>
-      <span class="set-bar"><span style="width:${total ? Math.round((100 * answered) / total) : 0}%"></span></span>`;
-    list.appendChild(a);
+    list.appendChild(sec);
+  });
+  // Up next: the first unfinished set in the newest homework, then older ones
+  const next = weeks.flatMap((hw) => sets.filter((x) => x.homework === hw).sort((a, b) => a.position - b.position))
+    .find((set) => { const p = progress(set); return p.answered < p.total; });
+  const btn = $("up-next");
+  btn.hidden = false;
+  if (next) {
+    const p = progress(next);
+    btn.classList.remove("caught-up");
+    btn.href = "#" + encodeURIComponent(next.id);
+    btn.innerHTML = `${p.answered ? "Continue" : "Start"} ${esc(next.title)} <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg>`;
+  } else {
+    btn.classList.add("caught-up");
+    btn.removeAttribute("href");
+    btn.textContent = "All caught up. Nice work.";
   }
+  btn.classList.add("rise");
   show("menu");
+  window.LiquidGlassRefraction?.refresh();
 }
 
 async function openSubjectVerb() {
@@ -166,7 +225,7 @@ function render() {
   const r = state.results[q.id];
 
   $("q-count").textContent = `Question ${state.idx + 1} of ${state.questions.length}`;
-  $("q-set").textContent = q.set_name === "Warm-up" ? "Warm-up" : "Challenge";
+  $("q-set").textContent = "Subject & Verb";
 
   // Step chips
   const sPick = r ? r.subject_sel : [...d.s];
@@ -192,7 +251,7 @@ function render() {
 
   // Controls
   $("continue").hidden = !!r || d.step !== "subject" || d.s.size === 0;
-  $("submit").hidden = !!r;
+  $("submit").hidden = !!r || !$("continue").hidden;
   $("submit").disabled = state.busy || d.s.size === 0 || d.p.size === 0;
   $("back").disabled = state.idx === 0;
   $("next").classList.toggle("primary", !!r);
@@ -249,7 +308,7 @@ function renderSentence(q, d, r) {
 function fitSentence() {
   const q = current();
   if (!q || $("practice").hidden) return;
-  const box = $("sentence"), sheet = document.querySelector(".sheet");
+  const box = $("sentence"), sheet = box.closest(".sheet");
   const len = q.sentence.length;
   const ideal = len <= 60 ? 42 : len <= 110 ? 35 : len <= 145 ? 31 : 28;
   let fs = Math.min(ideal, Math.max(18, window.innerWidth * 0.062));

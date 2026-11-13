@@ -26,6 +26,20 @@ SAT homework site for finding the simple subject and simple predicate. Students 
 
 4. Send students the main site link. They choose "Create account" the first time.
 
+## Weekly homework
+
+Practice sets are grouped into weekly sections ("Homework 1", "Homework 2", ...) by the `homework` column in `practice_sets`. The newest homework shows first and is marked "This week." To start a new week, add sets with the next homework number.
+
+Set types:
+
+- `subject_verb`: click the simple subject, then the verb (`supabase/questions.py`).
+- `multiple_choice`: Educator Question Bank style A-D questions (`supabase/sets/extract_qbank.py`, `load_sql.py`).
+- `trim_subject_verb`: cross out the extra information, then find the subject and verb (`supabase/sets/cross_out.py`).
+
+## Design
+
+The look follows Apple's Liquid Glass language: glass toolbars and control dock over solid content cards (`css/tokens.css`, `js/refraction.js`, MIT-licensed from the apple-liquid-glass skill). The accent color is the purple from the logo. Run `./bump-version.sh` before committing so browsers load the new files right away.
+
 ## Common tasks
 
 - **Student forgot their password:** in Supabase, go to Authentication > Users, find them, and use "Send password recovery" (requires custom SMTP) or delete the user so they can sign up again. Deleting a user also deletes their answers.

@@ -1,6 +1,6 @@
 // Teacher dashboard: class totals, per-student scores, most-missed questions.
-import * as api from "./api.js?v=20261106033338";
-import { showAuth } from "./auth.js?v=20261106033338";
+import * as api from "./api.js?v=20261113114913";
+import { showAuth } from "./auth.js?v=20261113114913";
 
 const $ = (id) => document.getElementById(id);
 const SCREENS = ["loading", "auth", "denied", "dash"];
@@ -8,7 +8,8 @@ const show = (s) => SCREENS.forEach((x) => ($(x).hidden = x !== s));
 
 let data = null;       // subject/verb data
 let choice = null;     // multiple-choice sets, attempts and keys
-let activeSet = "subject-verb";
+let trim = null;       // cross-out sets
+let activeSet = null;
 let openStudent = null;
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -34,7 +35,11 @@ async function start() {
 async function load() {
   $("refresh").disabled = true;
   try {
-    [data, choice] = await Promise.all([api.teacherData(), api.teacherChoiceData()]);
+    [data, choice, trim] = await Promise.all([api.teacherData(), api.teacherChoiceData(), api.teacherTrimData()]);
+    if (!activeSet || !choice.sets.some((x) => x.id === activeSet)) {
+      const newest = Math.max(...choice.sets.map((x) => x.homework));
+      activeSet = choice.sets.filter((x) => x.homework === newest).sort((a, b) => a.position - b.position)[0].id;
+    }
     renderTabs();
     render();
     $("updated").textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -46,20 +51,30 @@ async function load() {
 function renderTabs() {
   const nav = $("set-tabs");
   nav.innerHTML = "";
-  for (const set of choice.sets) {
-    const b = document.createElement("button");
-    b.className = "set-tab";
-    b.setAttribute("role", "tab");
-    b.setAttribute("aria-selected", String(set.id === activeSet));
-    b.textContent = set.title;
-    b.onclick = () => { activeSet = set.id; openStudent = null; renderTabs(); render(); };
-    nav.appendChild(b);
+  const weeks = [...new Set(choice.sets.map((x) => x.homework))].sort((a, b) => b - a);
+  for (const hw of weeks) {
+    const group = document.createElement("div");
+    group.className = "tab-group";
+    group.innerHTML = `<span class="tab-group-label">Homework ${hw}</span><div class="segmented" role="tablist" aria-label="Homework ${hw}"></div>`;
+    const seg = group.querySelector(".segmented");
+    for (const set of choice.sets.filter((x) => x.homework === hw).sort((a, b) => a.position - b.position)) {
+      const b = document.createElement("button");
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", String(set.id === activeSet));
+      b.textContent = set.title;
+      b.onclick = () => { activeSet = set.id; openStudent = null; renderTabs(); render(); };
+      seg.appendChild(b);
+    }
+    nav.appendChild(group);
   }
+  const set = choice.sets.find((x) => x.id === activeSet);
+  $("dash-set-title").textContent = set ? set.title : "Results";
 }
 
 function render() {
   const set = choice.sets.find((s) => s.id === activeSet);
   if (set && set.kind === "multiple_choice") return renderChoice(set);
+  if (set && set.kind === "trim_subject_verb") return renderTrim(set);
   $("questions-note").textContent = '"Top wrong pick" is the decoy students chose most often.';
   renderSubjectVerb();
 }
@@ -250,6 +265,109 @@ function renderChoice(set) {
         <td class="num">${bar(r.right, r.n)}</td>
         <td><div class="dist">${["A", "B", "C", "D"].map((L) =>
           `<span class="${L === r.k.answer ? "ans" : L === r.wrong ? "top-wrong" : ""}" title="${esc(r.k.choices[L] || "")}">${L} ${r.counts[L]}</span>`).join("")}</div></td>
+      </tr>`).join("")}
+    </tbody>`;
+}
+
+// ---------- cross out, then find ----------
+
+function renderTrim(set) {
+  const students = data.students;
+  const keys = trim.keys.filter((k) => k.set_id === set.id);
+  const total = keys.length;
+  const keyIds = new Set(keys.map((k) => k.question_id));
+  const byStudent = new Map(students.map((s) => [s.user_id, []]));
+  for (const a of trim.attempts) if (keyIds.has(a.question_id) && byStudent.has(a.user_id)) byStudent.get(a.user_id).push(a);
+  const all = [...byStudent.values()].flat();
+  const three = (a) => a.removal_correct && a.subject_correct && a.predicate_correct;
+
+  const finished = students.filter((s) => byStudent.get(s.user_id).length === total).length;
+  $("totals").innerHTML = [
+    [students.length, "students signed up"],
+    [finished, "finished all " + total],
+    [all.length, "answers submitted"],
+    [pct(all.filter(three).length, all.length), "fully correct"],
+  ].map(([n, l]) => `<div class="total"><span class="total-n">${n}</span><span class="total-l">${l}</span></div>`).join("");
+
+  const rows = students.map((s) => {
+    const as = byStudent.get(s.user_id);
+    return { s, as, last: as.reduce((m, a) => (a.created_at > m ? a.created_at : m), ""),
+      cut: as.filter((a) => a.removal_correct).length, subj: as.filter((a) => a.subject_correct).length,
+      verb: as.filter((a) => a.predicate_correct).length, full: as.filter(three).length };
+  });
+  $("students").innerHTML = `
+    <thead><tr><th>Student</th><th class="num">Answered</th><th class="num">Cross out</th><th class="num">Subject</th><th class="num">Verb</th><th class="num">All three</th><th>Last active</th></tr></thead>
+    <tbody>${rows.length ? rows.map((r) => `
+      <tr class="clickable${openStudent === r.s.user_id ? " open" : ""}" data-id="${r.s.user_id}" tabindex="0">
+        <td><div class="name">${esc(r.s.full_name)}</div><div class="muted-sm">${esc(r.s.email)}</div></td>
+        <td class="num">${r.as.length} / ${total}</td>
+        <td class="num">${pct(r.cut, r.as.length)}</td>
+        <td class="num">${pct(r.subj, r.as.length)}</td>
+        <td class="num">${pct(r.verb, r.as.length)}</td>
+        <td class="num"><b>${pct(r.full, r.as.length)}</b></td>
+        <td>${r.last ? new Date(r.last).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Not started"}</td>
+      </tr>`).join("") : `<tr><td colspan="7" class="empty">No students yet.</td></tr>`}
+    </tbody>`;
+  $("students").querySelectorAll("tr.clickable").forEach((tr) => {
+    const open = () => { openStudent = openStudent === tr.dataset.id ? null : tr.dataset.id; render(); };
+    tr.onclick = open;
+    tr.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } };
+  });
+
+  const row = rows.find((r) => r.s.user_id === openStudent);
+  const box = $("student-detail");
+  if (!row) box.hidden = true;
+  else {
+    const byQ = new Map(row.as.map((a) => [a.question_id, a]));
+    const misses = keys.filter((k) => byQ.has(k.question_id) && !three(byQ.get(k.question_id)));
+    box.innerHTML = `
+      <h3>${esc(row.s.full_name)}</h3>
+      <div class="strip mini">${keys.map((k) => {
+        const a = byQ.get(k.question_id);
+        const n = a ? [a.removal_correct, a.subject_correct, a.predicate_correct].filter(Boolean).length : -1;
+        return `<span class="seg ${n === 3 ? "right" : n === 0 ? "wrong" : n > 0 ? "half" : ""}" title="Question ${k.q_position}"></span>`;
+      }).join("")}</div>
+      ${misses.length ? `<table class="misses"><thead><tr><th class="num">#</th><th>Sentence</th><th>What went wrong</th><th>Answer</th></tr></thead><tbody>
+        ${misses.map((k) => {
+          const a = byQ.get(k.question_id);
+          const notes = [
+            !a.removal_correct && a.missed_words ? `Left in: <span class="wrong-pick">${esc(a.missed_words)}</span>` : "",
+            a.cut_core_words ? `Crossed out: <span class="wrong-pick">${esc(a.cut_core_words)}</span>` : "",
+            !a.subject_correct ? `<span class="tag s">S</span> <span class="wrong-pick">${esc(a.subject_words)}</span>` : "",
+            !a.predicate_correct ? `<span class="tag v">V</span> <span class="wrong-pick">${esc(a.predicate_words)}</span>` : "",
+          ].filter(Boolean).map((x) => `<div>${x}</div>`).join("");
+          return `<tr><td class="num qnum">${k.q_position}</td><td class="sent">${esc(k.sentence)}</td><td>${notes}</td>
+            <td><div><span class="tag s">S</span> ${esc(k.subject_words)}</div><div><span class="tag v">V</span> ${esc(k.predicate_words)}</div></td></tr>`;
+        }).join("")}</tbody></table>`
+        : `<p class="muted-sm">${row.as.length ? "No misses so far." : "This student hasn't answered any questions yet."}</p>`}`;
+    box.hidden = false;
+  }
+
+  $("questions-note").textContent = '"Left in most" is the extra information students most often forgot to cross out.';
+  const qrows = keys.map((k) => {
+    const as = all.filter((a) => a.question_id === k.question_id);
+    return { k, n: as.length, full: as.filter(three).length,
+      cut: as.filter((a) => a.removal_correct).length, subj: as.filter((a) => a.subject_correct).length,
+      verb: as.filter((a) => a.predicate_correct).length,
+      leftIn: topPick(as.filter((a) => !a.removal_correct && a.missed_words).map((a) => a.missed_words)),
+      wrongS: topPick(as.filter((a) => !a.subject_correct).map((a) => a.subject_words)),
+      wrongV: topPick(as.filter((a) => !a.predicate_correct).map((a) => a.predicate_words)) };
+  }).sort((a, b) => (a.n ? a.full / a.n : 2) - (b.n ? b.full / b.n : 2) || b.n - a.n || a.k.q_position - b.k.q_position);
+  $("questions").innerHTML = `
+    <thead><tr><th class="num">#</th><th>Sentence and trimmed answer</th><th class="num">Answers</th><th class="num">All three</th><th class="num">Cross out</th><th class="num">Subject</th><th class="num">Verb</th><th>Left in most / top wrong picks</th></tr></thead>
+    <tbody>${qrows.map((r) => `
+      <tr>
+        <td class="num qnum">${r.k.q_position}</td>
+        <td class="sent"><div>${esc(r.k.sentence)}</div><div class="key">${esc(r.k.trimmed)}</div></td>
+        <td class="num">${r.n}</td>
+        <td class="num">${bar(r.full, r.n)}</td>
+        <td class="num">${pct(r.cut, r.n)}</td>
+        <td class="num">${pct(r.subj, r.n)}</td>
+        <td class="num">${pct(r.verb, r.n)}</td>
+        <td class="picks">${r.leftIn ? `<div>Left in: ${esc(r.leftIn.word)} <span class="muted-sm">×${r.leftIn.count}</span></div>` : ""}
+          ${r.wrongS ? `<div><span class="tag s">S</span> ${esc(r.wrongS.word)} <span class="muted-sm">×${r.wrongS.count}</span></div>` : ""}
+          ${r.wrongV ? `<div><span class="tag v">V</span> ${esc(r.wrongV.word)} <span class="muted-sm">×${r.wrongV.count}</span></div>` : ""}
+          ${!r.leftIn && !r.wrongS && !r.wrongV ? `<span class="muted-sm">–</span>` : ""}</td>
       </tr>`).join("")}
     </tbody>`;
 }

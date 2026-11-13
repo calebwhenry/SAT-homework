@@ -1,7 +1,7 @@
 // Small helpers shared by the student page modules.
 export const $ = (id) => document.getElementById(id);
 
-const SCREENS = ["loading", "auth", "profile", "menu", "practice", "mc", "done"];
+const SCREENS = ["loading", "auth", "profile", "menu", "practice", "mc", "trim", "done"];
 export function show(screen) {
   for (const s of SCREENS) if ($(s)) $(s).hidden = s !== screen;
 }
