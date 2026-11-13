@@ -75,3 +75,16 @@ tr.clickable td:last-child { border-radius: 0 var(--r-row) var(--r-row) 0; }
   .dash { width: calc(100% - 24px); padding-top: 20px; }
   #updated { display: none; }
 }
+
+/* Dusk: the sign-in card sits on the same scene as the student page (still image, no video) */
+.teacher-page #auth, .teacher-page #denied {
+  background: var(--scrim-soft), url("../assets/dusk-poster.jpg") 50% 62% / cover no-repeat, var(--dusk);
+}
+.teacher-page #auth .card, .teacher-page #denied .card { box-shadow: 0 30px 80px rgba(10, 4, 30, 0.45); border-radius: 28px; }
+.teacher-page {
+  background:
+    radial-gradient(1200px 600px at 0% 0%, rgba(107, 47, 160, 0.07), transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, rgba(197, 141, 181, 0.07), transparent 60%),
+    var(--ground);
+}
+.dash-title { font-size: clamp(40px, 5vw, 56px); line-height: 1; margin: 0 0 18px; }

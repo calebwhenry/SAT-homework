@@ -1,5 +1,5 @@
 // Sign-in / create-account form shared by the student page and the teacher dashboard.
-import * as api from "./api.js?v=20261113114913";
+import * as api from "./api.js?v=20261113121554";
 
 const $ = (id) => document.getElementById(id);
 
@@ -30,6 +30,8 @@ export function showAuth() {
       $("name-field").hidden = m !== "signup";
       $("password").autocomplete = m === "signup" ? "new-password" : "current-password";
       btn.textContent = m === "signup" ? "Create account" : "Sign in";
+      const head = document.querySelector(".auth-stage .auth-title");
+      if (head) head.textContent = m === "signup" ? "Join your class" : "Welcome back";
       err.hidden = true;
     };
     document.querySelectorAll("#auth .tab").forEach((t) => (t.onclick = () => setMode(t.dataset.mode)));

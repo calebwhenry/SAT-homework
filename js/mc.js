@@ -1,6 +1,6 @@
 // Multiple-choice practice (question-bank sets), one question at a time.
-import * as api from "./api.js?v=20261113114913";
-import { $, show, esc, richText, showDone } from "./ui.js?v=20261113114913";
+import * as api from "./api.js?v=20261113121554";
+import { $, show, esc, richText, showDone } from "./ui.js?v=20261113121554";
 
 const LETTERS = ["A", "B", "C", "D"];
 const st = {
@@ -68,7 +68,7 @@ function render() {
 
   $("mc-count").textContent = `Question ${st.idx + 1} of ${st.questions.length}`;
   $("mc-passage").innerHTML = q.passage
-    .map((p) => `<p class="${/^©/.test(p) ? "credit" : ""}">${richText(p)}</p>`).join("");
+    .map((p) => `<p class="${/^©/.test(p) ? "credit" : p.includes("\n") ? "verse" : ""}">${richText(p)}</p>`).join("");
   $("mc-stem").innerHTML = richText(q.stem);
 
   const box = $("mc-choices");

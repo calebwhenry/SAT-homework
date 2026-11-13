@@ -1,7 +1,7 @@
 // "Cross out, then find": step 1 cross out the extra information, step 2 pick the
 // simple subject, step 3 pick the verb. Graded on the server when the student submits.
-import * as api from "./api.js?v=20261113114913";
-import { $, show, esc, showDone } from "./ui.js?v=20261113114913";
+import * as api from "./api.js?v=20261113121554";
+import { $, show, esc, showDone } from "./ui.js?v=20261113121554";
 
 const STEPS = ["cut", "subject", "predicate"];
 const st = {
@@ -109,8 +109,8 @@ function render() {
 
   $("trim-prompt").textContent = r ? "" : {
     cut: d.cut.size
-      ? "Keep going until only the core of the sentence is left. Click a crossed-out word to bring it back."
-      : "Cross out the extra information: prepositional phrases, interrupters, and describing phrases. Click a word, or drag across a phrase.",
+      ? "Cross out everything set off by commas, dashes, or parentheses. Other extra words are optional. Click a crossed-out word to bring it back."
+      : "Cross out the information set off by commas, dashes, or parentheses. Click a word, or drag across a phrase.",
     subject: d.s.size ? "Compound subject? Click each part. Otherwise, continue to the verb."
       : "Now click the simple subject in what's left.",
     predicate: d.p.size ? "Include every helping verb, then submit."
@@ -143,16 +143,26 @@ function renderSentence(q, d, r) {
   const cut = r ? new Set(r.removed_sel) : d.cut;
   const selS = new Set(r ? r.subject_sel : d.s), selP = new Set(r ? r.predicate_sel : d.p);
 
+  const punct = (w) => !/[\p{L}\p{N}]/u.test(w);
+  const isGone = (i) => collapse && i >= 0 && i < q.words.length && cut.has(i);
   let prevGone = false;
   q.words.forEach((w, i) => {
-    const gone = collapse && cut.has(i);
+    // A dash or other bare punctuation is never a word to pick; it leaves with the phrase it marks.
+    if (punct(w)) {
+      if (isGone(i - 1) || isGone(i + 1)) return;
+      box.append(" ", w);
+      return;
+    }
+    const gone = isGone(i);
     if (gone) {
       if (!prevGone) { const g = document.createElement("span"); g.className = "gap"; g.textContent = "…"; box.append(" ", g); }
       prevGone = true;
       return;
     }
     prevGone = false;
-    const [lead, text, trail] = splitWord(w);
+    let [lead, text, trail] = splitWord(w);
+    // "grandmother," before a removed phrase: drop the comma that opened it
+    if (trail === "," && (isGone(i + 1) || (punct(q.words[i + 1] || "x") && isGone(i + 2)))) trail = "";
     if (box.childNodes.length) box.append(" ");
     const span = document.createElement("span");
     span.className = "token";
@@ -200,7 +210,10 @@ function renderFeedback(q, r) {
   const removed = new Set(r.removed_sel);
   const missed = r.extra_idx.filter((i) => !removed.has(i));
   const cutCore = [...r.subject_idx, ...r.predicate_idx].filter((i) => removed.has(i));
-  const cutText = r.removal_correct ? "You removed all the extra information."
+  const leftOptional = (r.optional_idx || []).filter((i) => !removed.has(i));
+  const cutText = r.removal_correct
+    ? "You crossed out everything set off by commas, dashes, or parentheses." +
+      (leftOptional.length ? ` You could also cross out ${missedPhrases(q, r.optional_idx, removed).map((p) => `“${esc(p)}”`).join(" and ")}, but that's optional.` : "")
     : [missed.length ? `Still needed crossing out: ${missedPhrases(q, r.extra_idx, removed).map((p) => `<b>“${esc(p)}”</b>`).join(", ")}.` : "",
        cutCore.length ? `Keep the core words: you crossed out <b class="strike">${esc(wordsText(q, cutCore))}</b>.` : ""].join(" ");
   const row = (label, ok, text) => `

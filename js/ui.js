@@ -2,8 +2,25 @@
 export const $ = (id) => document.getElementById(id);
 
 const SCREENS = ["loading", "auth", "profile", "menu", "practice", "mc", "trim", "done"];
+const SCENIC = new Set(["auth", "profile", "menu", "done"]);
+const calm = matchMedia("(prefers-reduced-motion: reduce)");
+
 export function show(screen) {
   for (const s of SCREENS) if ($(s)) $(s).hidden = s !== screen;
+  document.body.dataset.screen = screen;
+  scene(SCENIC.has(screen));
+}
+
+// The dusk video plays only behind the scenic screens, and never under Reduce Motion.
+function scene(on) {
+  const v = $("ambient-video");
+  if (!v) return;
+  if (!v.dataset.wired) {
+    v.dataset.wired = "1";
+    v.addEventListener("playing", () => document.body.classList.add("scene-live"), { once: true });
+  }
+  if (on && !calm.matches) v.play().catch(() => {});
+  else v.pause();
 }
 
 export function esc(s) {

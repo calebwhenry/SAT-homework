@@ -4,3 +4,5 @@ __pycache__/
 # Extracted question-bank content stays out of the public repo
 supabase/sets/*.json
 supabase/banks/*.json
+supabase/sets/main_idea_*.sql
+supabase/sets/main_idea_explanations.py

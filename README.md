@@ -34,11 +34,12 @@ Set types:
 
 - `subject_verb`: click the simple subject, then the verb (`supabase/questions.py`).
 - `multiple_choice`: Educator Question Bank style A-D questions (`supabase/sets/extract_qbank.py`, `load_sql.py`).
-- `trim_subject_verb`: cross out the extra information, then find the subject and verb (`supabase/sets/cross_out.py`).
+- `trim_subject_verb`: Subject & Verb (Level 2). Students must cross out everything set off by commas, dashes, or parentheses (`extra_idx`); crossing out other extra words (`optional_idx`) is allowed but not required. Then they find the subject and verb (`supabase/sets/cross_out.py`).
+- Main Idea (Homework 2) is a `multiple_choice` set loaded with `supabase/sets/load_main_idea.py` from a College Board question-bank PDF via `extract_qbank.py`. Its JSON, explanations and SQL stay out of the repo because they contain the answers.
 
 ## Design
 
-The look follows Apple's Liquid Glass language: glass toolbars and control dock over solid content cards (`css/tokens.css`, `js/refraction.js`, MIT-licensed from the apple-liquid-glass skill). The accent color is the purple from the logo. Run `./bump-version.sh` before committing so browsers load the new files right away.
+The sign-in, home and finished screens sit on a looping dusk video (MotionSites media shelf), with `assets/dusk-poster.jpg` as the still shown while it loads and under Reduce Motion. The practice screens leave the video out so reading stays calm. Chrome follows Apple's Liquid Glass language: glass toolbars and control dock over solid content cards (`css/tokens.css`, `js/refraction.js`, MIT-licensed from the apple-liquid-glass skill). The accent color is the purple from the logo. Run `./bump-version.sh` before committing so browsers load the new files right away.
 
 ## Common tasks
 

@@ -14,6 +14,7 @@ from collections import Counter
 import pymupdf
 
 HEADINGS = {"Question", "Answer", "Rationale"}
+STEM_ANY = re.compile(r"(?<=[.!?”\"] )(Based on the text|Which choice|Which statement|Which question|Which finding|According to the text|What does the text|In the text,|As used in the text|The text most strongly)")
 STEM = re.compile(r"^(Which choice|As used in the text|Based on the text|What does)")
 
 
@@ -66,7 +67,9 @@ def paragraphs(lines):
 
 
 def to_html(para):
-    spans = [s for line in para for s in line + [(" ", None)]]
+    line_texts = ["".join(t for t, _ in line).strip() for line in para]
+    verse = len(para) > 1 and all(len(t) <= 60 for t in line_texts)
+    spans = [s for line in para for s in line + [("\n" if verse else " ", None)]]
     weight = Counter()
     for t, f in spans:
         if f and t.strip():
@@ -82,18 +85,19 @@ def to_html(para):
     out = re.sub(r"</i>([\s’'éüñíï]*)<i>", r"\1", out)   # rejoin a title split by an apostrophe or accent
     out = re.sub(r"<i>(\s+)", r"\1<i>", out)
     out = re.sub(r"(\s+)</i>", r"</i>\1", out)
-    return re.sub(r"\s+", " ", out).strip()
+    out = re.sub(r"[ \t]+", " ", out)
+    out = re.sub(r" *\n *", "\n", out).strip()
+    return out if verse else re.sub(r"\s+", " ", out)
 
 
 def plain(s):
     return html.unescape(re.sub(r"<[^>]+>", "", s)).strip()
 
 
-def parse_page(page):
+def parse_paragraphs(paras_html, page_text):
     q = {"choices": {}, "passage": [], "rationale": []}
     section = None
-    for para in paragraphs(page_lines(page)):
-        t = to_html(para)
+    for t in paras_html:
         p = plain(t)
         m = re.match(r"Question ID:\s*(\w+)", p)
         if m:
@@ -110,30 +114,54 @@ def parse_page(page):
                 m = re.match(r"\s*([A-D])\.\s*(.*)", part)
                 if m:
                     q["choices"][m.group(1)] = m.group(2).strip()
+                elif part.strip() and q["choices"]:
+                    # a choice that wrapped onto the next page
+                    last = sorted(q["choices"])[-1]
+                    q["choices"][last] += " " + part.strip()
         elif section == "Rationale":
             q["rationale"].append(t)
-    m = re.search(r"\b(Easy|Medium|Hard)\b", page.get_text())
+    m = re.search(r"\b(Easy|Medium|Hard)\b", page_text)
     q["difficulty"] = m.group(1) if m else None
-    for i in range(len(q["passage"]) - 1, -1, -1):
-        if STEM.match(plain(q["passage"][i])):
-            q["stem"] = q["passage"].pop(i)
-            break
+    # The question stem is the last paragraph of the Question section.
+    if q["passage"]:
+        last = q["passage"].pop()
+        # A stem printed tight under the passage gets merged into its last paragraph; split it off.
+        starts = [m.start() for m in STEM_ANY.finditer(last)]
+        if starts and starts[-1] > 0:
+            q["passage"].append(last[:starts[-1]].strip())
+            last = last[starts[-1]:]
+        q["stem"] = last
     return q
 
 
 def main(pdf, out):
     doc = pymupdf.open(pdf)
-    qs = []
+    # Read every page as one stream, then cut it into questions at each "Question ID".
+    groups, texts = [], []
     for i, page in enumerate(doc, 1):
-        q = parse_page(page)
-        q["page"] = i
+        paras = [to_html(p) for p in paragraphs(page_lines(page))]
+        # skip running headers/footers that repeat on continuation pages
+        paras = [p for p in paras if plain(p)]
+        if paras and re.match(r"Question ID:", plain(paras[0])):
+            groups.append({"pages": [i], "paras": []}); texts.append("")
+        elif not groups:
+            continue
+        else:
+            groups[-1]["pages"].append(i)
+        groups[-1]["paras"] += paras
+        texts[-1] += page.get_text()
+    qs = []
+    for g, text in zip(groups, texts):
+        q = parse_paragraphs(g["paras"], text)
+        q["page"] = g["pages"][0]
+        q["pages"] = g["pages"]
         problems = [k for k in ("qbank_id", "answer", "stem", "difficulty") if not q.get(k)]
         if sorted(q["choices"]) != list("ABCD"):
             problems.append(f"choices={sorted(q['choices'])}")
         if not q["passage"] or not q["rationale"]:
             problems.append("passage/rationale missing")
         if problems:
-            print(f"page {i}: PROBLEMS {problems}")
+            print(f"pages {g['pages']}: PROBLEMS {problems}")
         qs.append(q)
     json.dump(qs, open(out, "w"), indent=1, ensure_ascii=False)
     print(f"{len(qs)} questions extracted")
